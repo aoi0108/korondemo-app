@@ -29,10 +29,9 @@ export function MonthSwitcher({ month, onChange, label }: { month: string; onCha
   </div>;
 }
 
-export function Daruma({ cat, seed = false, sizes = '110px' }: { cat: GardenCat; seed?: boolean; sizes?: string }) {
+export function Daruma({ cat, sizes = '110px' }: { cat: GardenCat; sizes?: string }) {
   return <div className="mascot" aria-hidden="true">
     <Image className="daruma-art" src={cat.art} alt="" sizes={sizes}/>
-    {seed && <span className="seed"/>}
   </div>;
 }
 

@@ -316,7 +316,7 @@ export default function Page() {
       {storageError && <p role="alert" className="notice">{storageError}</p>}
       {screen === 'home' && <div className="home">
         <div className="hero">
-          <Daruma cat={cat} seed={ready && !entries.length} sizes="(max-width: 530px) 34vw, 180px"/>
+          <Daruma cat={cat} sizes="(max-width: 530px) 34vw, 180px"/>
           <div className="paw-trail" aria-hidden="true"><Paw/><Paw/></div>
         </div>
         <button className="primary" disabled={!ready} onClick={() => start('home')}><Fish/>できごとを記録する</button>
