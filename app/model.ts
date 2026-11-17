@@ -7,7 +7,7 @@ export const feelings = [
 ] as const;
 
 export type Tag = { label: string; color: string };
-export type Perspective = { title: string; description: string };
+export type Perspective = { title: string; description: string; question?: string };
 export type Entry = {
   id: string;
   createdAt: number;
@@ -15,13 +15,14 @@ export type Entry = {
   tags: Tag[];
   perspectives?: Perspective[];
   selected?: number;
-  challenge?: { text: string; createdAt: number; done: boolean };
+  challenge?: { text: string; createdAt: number; done: boolean; reflection?: string };
   retryAt?: number;
 };
 
 export function validPerspectives(value: unknown): value is Perspective[] {
   return Array.isArray(value) && value.length === 3 && value.every((p) =>
     p && typeof p.title === 'string' && p.title.trim() && p.title.length <= 60 &&
-    typeof p.description === 'string' && p.description.trim() && p.description.length <= 300
+    typeof p.description === 'string' && p.description.trim() && p.description.length <= 300 &&
+    typeof p.question === 'string' && p.question.trim() && p.question.length <= 120
   );
 }
