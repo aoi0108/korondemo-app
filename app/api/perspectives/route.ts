@@ -1,4 +1,4 @@
-import { validPerspectives } from '../../model';
+import { entryCharacterLimit, tagLimit, validPerspectives } from '../../model';
 
 const reserve = `
 local clock = redis.call('TIME')
@@ -50,8 +50,8 @@ export async function POST(request: Request) {
     const data = await request.json();
     const body = typeof data?.body === 'string' ? data.body.trim() : '';
     const tags: unknown = data?.tags ?? [];
-    if (!body || Array.from(body).length > 140 || !Array.isArray(tags) ||
-      tags.length > 3 || tags.some((tag) => typeof tag !== 'string' || !tag.trim() || Array.from(tag).length > 30)) {
+    if (!body || Array.from(body).length > entryCharacterLimit || !Array.isArray(tags) ||
+      tags.length > tagLimit || tags.some((tag) => typeof tag !== 'string' || !tag.trim() || Array.from(tag).length > 30)) {
       return Response.json({ error: 'invalid' }, { status: 400 });
     }
 

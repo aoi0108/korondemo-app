@@ -1,3 +1,6 @@
+export const entryCharacterLimit = 140;
+export const tagLimit = 3;
+
 export const palette = ['#F9DF85', '#AADDC7', '#AFD6EC', '#CABBE8', '#F3B5C7', '#F6C39B'];
 export const ivory = '#FFF4DF';
 export const feelings = [
@@ -8,6 +11,7 @@ export const feelings = [
 
 export type Tag = { label: string; color: string };
 export type Perspective = { title: string; description: string; question?: string };
+export type Challenge = { text: string; createdAt: number; done: boolean; reflection?: string };
 export type Entry = {
   id: string;
   createdAt: number;
@@ -15,7 +19,7 @@ export type Entry = {
   tags: Tag[];
   perspectives?: Perspective[];
   selected?: number;
-  challenge?: { text: string; createdAt: number; done: boolean; reflection?: string };
+  challenge?: Challenge;
   retryAt?: number;
 };
 

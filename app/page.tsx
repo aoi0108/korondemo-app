@@ -1,12 +1,8 @@
 'use client';
 
-import Image from 'next/image';
-import catDaruma from './cat-daruma.png';
-import blackDaruma from './cat-black.webp';
-import calicoDaruma from './cat-calico.webp';
-import siameseDaruma from './cat-siamese.webp';
 import { useEffect, useRef, useState } from 'react';
-import { Entry, Tag, feelings, ivory, palette, validPerspectives } from './model';
+import { cats, Daruma, Fish, Flower, monthKey, MonthSwitcher, Paw, type GardenCat } from './garden-ui';
+import { entryCharacterLimit, feelings, palette, tagLimit, validPerspectives, type Challenge, type Entry, type Tag } from './model';
 
 type Tab = 'home' | 'records' | 'challenges';
 type Screen = Tab | 'new' | 'edit' | 'bloom' | 'detail';
@@ -14,57 +10,10 @@ const storageKey = 'korondemo.entries.v1';
 const catStorageKey = 'korondemo.garden-cat.v1';
 const challengeBatchSize = 10;
 const reflectionLimit = 140;
-const cats = [
-  { id: 'sakura', name: 'さくら猫', art: catDaruma, note: '書けるところからでいいにゃ。' },
-  { id: 'black', name: '黒猫', art: blackDaruma, note: 'ここで待ってたにゃ。' },
-  { id: 'calico', name: '三毛猫', art: calicoDaruma, note: 'また会えたにゃ。' },
-  { id: 'siamese', name: 'シャム猫', art: siameseDaruma, note: 'ゆっくり聞かせてにゃ。' },
-] as const;
-type GardenCat = (typeof cats)[number];
 const tabs = [
   ['home', 'ホーム', '⌂'], ['records', '記録', '▤'], ['challenges', '小さな挑戦'],
 ] as const;
 const dateLabel = (time: number) => new Date(time).toLocaleDateString('ja-JP', { dateStyle: 'long' });
-const monthKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0')].join('-');
-
-function MonthSwitcher({ month, onChange, label }: { month: string; onChange: (month: string) => void; label: string }) {
-  function moveMonth(offset: number) {
-    if (!month) return;
-    const [year, selectedMonth] = month.split('-').map(Number);
-    onChange(monthKey(new Date(year, selectedMonth - 1 + offset, 1)));
-  }
-
-  return <div className="switcher" role="group" aria-label={label + 'の月切り替え'}>
-    <button className="round" aria-label="前月" onClick={() => moveMonth(-1)}>‹</button>
-    <input type="month" aria-label={label + 'の年月'} value={month} onChange={(event) => event.target.value && onChange(event.target.value)}/>
-    <button className="round" aria-label="翌月" onClick={() => moveMonth(1)}>›</button>
-  </div>;
-}
-
-function Daruma({ cat, seed = false, sizes = '110px' }: { cat: GardenCat; seed?: boolean; sizes?: string }) {
-  return <div className="mascot" aria-hidden="true">
-    <Image className="daruma-art" src={cat.art} alt="" sizes={sizes}/>
-    {seed && <span className="seed"/>}
-  </div>;
-}
-
-function Paw() {
-  return <span className="paw" aria-hidden="true"><i/><i/><i/><i/></span>;
-}
-
-function Fish() {
-  return <span className="fish" aria-hidden="true"/>;
-}
-
-function Flower({ tags }: { tags: Tag[] }) {
-  const colors = tags.length ? tags.map((tag) => tag.color) : [ivory];
-  return <span className="flower" aria-hidden="true">
-    {Array.from({ length: 5 }, (_, index) => (
-      <i key={index} style={{ background: colors[index % colors.length], transform: 'rotate(' + index * 72 + 'deg) translateY(-36%)' }}/>
-    ))}
-    <b/>
-  </span>;
-}
 
 export default function Page() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -212,7 +161,7 @@ export default function Page() {
   function toggleTag(tag: Tag) {
     const existing = tags.find((item) => item.label === tag.label);
     if (existing) setTags(tags.filter((item) => item.label !== tag.label));
-    else if (tags.length < 3) setTags([...tags, tag]);
+    else if (tags.length < tagLimit) setTags([...tags, tag]);
   }
 
   async function generate(record: Entry) {
@@ -223,7 +172,7 @@ export default function Page() {
     try {
       const response = await fetch('/api/perspectives', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: record.body, ...(record.tags.length && { tags: record.tags.map((tag) => tag.label) }) }),
+        body: JSON.stringify({ body: record.body, ...(record.tags.length ? { tags: record.tags.map((tag) => tag.label) } : {}) }),
       });
       if (response.status === 429) {
         const time = Date.now();
@@ -246,7 +195,7 @@ export default function Page() {
 
   function saveEntry() {
     const text = body.trim();
-    if (!text || Array.from(text).length > 140) return;
+    if (!text || Array.from(text).length > entryCharacterLimit) return;
     if (screen === 'edit' && entry) {
       if (update(entry.id, { body: text, tags })) go('detail');
       return;
@@ -271,7 +220,7 @@ export default function Page() {
     if (screen === 'bloom') go('home');
   }
 
-  function updateChallenge(recordId: string, changes: Partial<NonNullable<Entry['challenge']>>) {
+  function updateChallenge(recordId: string, changes: Partial<Challenge>) {
     return commit((records) => {
       if (!records.some((record) => record.id === recordId && record.challenge)) {
         throw new Error('Challenge unavailable');
@@ -337,12 +286,13 @@ export default function Page() {
   }
 
   const visibleFlowers = entries.filter((record) => monthKey(new Date(record.createdAt)) === month);
-  const challenges = entries.filter((record) => record.challenge?.done === done)
-    .sort((a, b) => b.challenge!.createdAt - a.challenge!.createdAt);
+  const challenges = entries.filter((record): record is Entry & { challenge: Challenge } =>
+    record.challenge?.done === done
+  ).sort((a, b) => b.challenge.createdAt - a.challenge.createdAt);
   const visibleChallenges = done
-    ? challenges.filter((record) => monthKey(new Date(record.challenge!.createdAt)) === challengeMonth)
+    ? challenges.filter((record) => monthKey(new Date(record.challenge.createdAt)) === challengeMonth)
     : challenges.slice(0, challengeLimit);
-  const dateOrder = [...entries].sort((a, b) => b.createdAt - a.createdAt);
+  const dateOrder = screen === 'records' ? [...entries].sort((a, b) => b.createdAt - a.createdAt) : [];
   const form = screen === 'new' || screen === 'edit';
 
   return <div className="shell">
@@ -391,16 +341,16 @@ export default function Page() {
         {screen === 'new' && <p className="mascot-note"><Fish/>{cat.note}</p>}
         <label htmlFor="body">できごと</label>
         <textarea id="body" rows={4} required value={body} onChange={(event) => {
-          setBody(Array.from(event.target.value).slice(0, 140).join(''));
+          setBody(Array.from(event.target.value).slice(0, entryCharacterLimit).join(''));
         }}/>
-        <div className="count">{Array.from(body).length} / 140</div>
+        <div className="count">{Array.from(body).length} / {entryCharacterLimit}</div>
         <fieldset>
-          <legend>気持ちタグ（任意・3つまで）</legend>
+          <legend>気持ちタグ（任意・{tagLimit}つまで）</legend>
           <div className="tags">
             {feelings.map(([label, slot]) => {
               const active = tags.some((tag) => tag.label === label);
               return <button key={label} type="button" className="tag" aria-pressed={active}
-                disabled={!active && tags.length >= 3} onClick={() => toggleTag({ label, color: palette[slot] })}>
+                disabled={!active && tags.length >= tagLimit} onClick={() => toggleTag({ label, color: palette[slot] })}>
                 <i style={{ background: palette[slot] }}/>{label}
               </button>;
             })}
@@ -411,7 +361,7 @@ export default function Page() {
           </div>
           <label htmlFor="custom">自分のタグ</label>
           <div className="custom"><input id="custom" maxLength={30} value={custom} onChange={(event) => setCustom(event.target.value)}/>
-            <button type="button" className="secondary" disabled={!custom.trim() || tags.length >= 3 || tags.some((tag) => tag.label === custom.trim())}
+            <button type="button" className="secondary" disabled={!custom.trim() || tags.length >= tagLimit || tags.some((tag) => tag.label === custom.trim())}
               onClick={() => {
                 const label = custom.trim();
                 const preset = feelings.find(([value]) => value === label);
@@ -454,8 +404,8 @@ export default function Page() {
         {visibleChallenges.length ? <ul className="list">{visibleChallenges.map((record) => <li className="challenge-row" key={record.id}>
           <button className="flower-link" onClick={() => open(record, 'challenges')} aria-label="元の記録を開く"><Flower tags={record.tags}/></button>
           <div>
-            <p>{record.challenge!.text}</p>
-            {done && record.challenge!.reflection && <p className="reflection-note"><strong>やってみて気づいたこと</strong>{record.challenge!.reflection}</p>}
+            <p>{record.challenge.text}</p>
+            {done && record.challenge.reflection && <p className="reflection-note"><strong>やってみて気づいたこと</strong>{record.challenge.reflection}</p>}
           </div>
           <button className="secondary" onClick={() => toggleChallenge(record)}>{done ? '取り消す' : 'できた'}</button>
         </li>)}</ul> : <div className="empty"><div className="small"><Daruma cat={cat}/></div><p>
@@ -520,7 +470,7 @@ export default function Page() {
         <li><strong>小さな一歩を残す</strong><p>試してみたいことが浮かんだら書いておけます。「小さな挑戦」で見返せます。</p></li>
       </ol>
       <p>庭の花をタップすると、その日の記録が開きます。</p>
-      <form method="dialog" className="dialog-actions"><button className="primary">閉じる</button></form>
+      <form method="dialog" className="dialog-actions centered"><button className="primary">閉じる</button></form>
     </dialog>
     <dialog ref={sendingDialog} aria-labelledby="sending-title">
       <h2 id="sending-title">Geminiへの送信について</h2>
